@@ -71,11 +71,11 @@ product.virtual('supplier',{
 product.set('toJSON',{virtuals: true})
 product.set('toObject',{virtuals: true})
 
-product.index({name: 'text' ,description:'text',spec:'text'})
+product.index({name: 'text'})
 
-product.plugin(mongoose_delete,{overrideMethods: 'all',deletedAt: true})
-product.plugin(mongooseLeanVirtuals)
 product.plugin(slug)
 product.plugin(mongoosePaginate);
+product.plugin(mongooseLeanVirtuals)
+product.plugin(mongoose_delete,{overrideMethods: 'all',deletedAt: true})
 
 module.exports = mongoose.model('product',product)

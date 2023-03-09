@@ -18,20 +18,26 @@ class SharesCtr {
   //[GET] /:collection
   async getDocuments(req, res, next) {
     try {
-      const { collection } = req.params;
+      const { collection} = req.params;
+      const {id } = req.query;
       let options = {}
       let data = []
+      let query = {$and:[]}
+      if(id) {
+        query['$and'].push({_id:sanitize(id)})
+      }
       switch (collection) {
         case "categories":
-          data = await collections[collection].findWithDeleted({}, options).populate({ path: 'supplierIds.supplierId', self: "name" }).sort({ _id: -1 })
+          data = await collections[collection].findWithDeleted(query, options).populate({ path: 'supplierIds.supplierId', self: "name" }).sort({ _id: -1 })
           break;
         case "products":
-          data = await collections[collection].findWithDeleted({}, options).populate("category", "name").populate("supplier", "name").sort({ _id: -1 })
+          data = await collections[collection].findWithDeleted(query, options).populate("category").populate("supplier").sort({ _id: -1 })
           if (req.query.active)
-            data = await collections[collection].find({ active: true }, { name: 1, code: 1, price: 1, options: 1, discount: 1 }).sort({ _id: -1 })
+          query['$and'].push({ active: true })
+            data = await collections[collection].find(query).sort({ _id: -1 })
           break;
         case "orders":
-          let query = { $and: [{ status: { $ne: 'WAITING' } }] }
+          query['$and'].push({ status: { $ne: 'WAITING' } })
           if (req.query.startDate) {
             query['$and'].push({ createDate: { $gte: req.query.startDate } })
           }
@@ -42,7 +48,7 @@ class SharesCtr {
           break;
         case "customers":
 
-          data = await collections[collection].findWithDeleted({}, options).sort({ _id: -1 })
+          data = await collections[collection].findWithDeleted(query, options).sort({ _id: -1 })
           if (req.query.active) {
             let { active } = req.query
             options = { fullname: 1, code: 1, firstName: 1, lastName: 1 }
@@ -53,7 +59,7 @@ class SharesCtr {
           data = null
           break;
         default:
-          data = await collections[collection].findWithDeleted({}, options).sort({ _id: -1 })
+          data = await collections[collection].findWithDeleted(query, options).sort({ _id: -1 })
           break;
       }
       return res.send({

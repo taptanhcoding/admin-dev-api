@@ -79,15 +79,14 @@ route.get('/dashboard',SharesController.Dashboard)
 
 //Xử lý document
 function handleCheckEmployee(req,res,next) {
-    if(req.params.collection == 'employees') {
+    if(req.params.collection === 'employees') {
         return res.status(500).send({
             status: false,
             message: "Bạn đang truy cập dữ liệu không cho phép"
         })
     }
-    else {
-        next()
-    }
+      return next()
+    
 }
 
 

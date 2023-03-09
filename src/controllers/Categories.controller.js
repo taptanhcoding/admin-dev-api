@@ -42,21 +42,11 @@ class CategoriesController {
   //-xử lý phía web
   async getCategoriesByClient(req,res,next) {
     try {
-      let dataRedis = client.get('categories')
-      if(dataRedis) {
-        return res.send({
-          status: true,
-          data: JSON.parse(dataRedis)
-        })
-      }
-      else{
-        const dataMg = await Categories.find({active: true})
-        await client.set('categories',JSON.stringify(dataMg))
-        return res.send({
-          status: true,
-          data: dataMg
-        })
-      }
+      const dataMg = await Categories.find({active: true},{name:1,slug:1,coverImgUrl:1})
+      return res.send({
+        status: true,
+        data: dataMg
+      })
     } catch (error) {
       console.log('lỗi lấy danh mục :: ',error);
       return res.status(500).send({

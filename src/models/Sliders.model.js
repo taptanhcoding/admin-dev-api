@@ -4,14 +4,11 @@ const Schema = mongoose.Schema
 
 const slider = new Schema({
     title : {type: String},
-    summary: {type: String,maxLength: 500, default: null},
     url:{type: String},
-    imgUrl: {type: String},
-    sortOrder:{type: Number},
+    typeSlide: {type: ['slider','banner_right'],require:true,default:'slider'},
+    coverImgUrl: {type: String,require:true},
     active:{type: Boolean,default: true},
-    createDate: { type: Date, default: new Date().getTime() },
     createBy : {type: Object},
-    updateDate: {type: Date,default: new Date().getTime()},
     updateBy: {type: Object}
 },{
     timestamps: true
