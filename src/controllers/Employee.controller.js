@@ -35,10 +35,11 @@ class EmployeesController {
     console.log(req.body);
     newAd
       .save()
-      .then(() =>
+      .then((data) =>
         res.send({
           status: true,
           message: "Thêm Admin thành công",
+          data
         })
       )
       .catch((err) => {
