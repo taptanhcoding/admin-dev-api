@@ -42,7 +42,7 @@ class CategoriesController {
   //-xử lý phía web
   async getCategoriesByClient(req,res,next) {
     try {
-      const dataMg = await Categories.find({active: true},{name:1,slug:1,coverImgUrl:1})
+      const dataMg = await Categories.find({active: true},{name:1,slug:1,coverImgUrl:1,description:1})
       return res.send({
         status: true,
         data: dataMg

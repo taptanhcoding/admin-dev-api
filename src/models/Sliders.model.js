@@ -4,8 +4,8 @@ const Schema = mongoose.Schema
 
 const slider = new Schema({
     title : {type: String},
-    url:{type: String},
-    typeSlide: {type: ['slider','banner_right'],require:true,default:'slider'},
+    to:{type: Object,default:{type: "",link: ""}},
+    typeSlide: {type: ['slider','slider_right','slider_left','banner'],require:true,default:'slider'},
     coverImgUrl: {type: String,require:true},
     active:{type: Boolean,default: true},
     createBy : {type: Object},

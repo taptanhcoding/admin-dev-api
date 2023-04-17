@@ -6,8 +6,9 @@ const mongoosePaginete = require('mongoose-paginate-v2')
 
 const customer = new Schema(
   {
-    firstName: { type: String, maxLength: 50 ,index:true},
-    lastName: { type: String, maxLength: 50,index: true},
+    firstName: { type: String, maxLength: 50 ,index:true,default: ""},
+    lastName: { type: String, maxLength: 50,index: true,default: ""},
+    username: { type: String, maxLength: 50,index: true,unique: true,require: true},
     code: {type:String ,index:true},
     phoneNumber: { type: String, default: null ,validate: {
         validator: function(val) {

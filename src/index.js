@@ -13,6 +13,7 @@ const PORT = process.env.PORT || 8080
 
 const routes = require('./routes/index.routes')
 const connectDB = require('./configs/connectDb.configs')
+const collections  =require('./models/index.model')
 const {connectRedis} = require('./configs/redis.configs')
 const {client} = require('./configs/redis.configs')
 
@@ -36,7 +37,7 @@ opts.issuer = jwtSettings.ISSUER;
 passport.use(new JwtStrategy(opts,async function(jwt_payload, done) {
     const oldToken = await client.get('token')
     if(oldToken) {
-        Employees.findOne({id: jwt_payload.sub},{password: 0}, function(err, user) {
+        collections[jwt_payload.type].findOne({id: jwt_payload.sub},{password: 0}, function(err, user) {
             if (err) {
                 return done(err, false);
             }
@@ -44,7 +45,6 @@ passport.use(new JwtStrategy(opts,async function(jwt_payload, done) {
                 return done(null, user);
             } else {
                 return done(null, false);
-                // or you could create a new account
             }
         });
     }else {

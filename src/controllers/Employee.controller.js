@@ -106,8 +106,8 @@ class EmployeesController {
       .then(async (acc) => {
         if (acc) {
           if (await bcrypt.compare(req.body.password, acc.password)) {
-            let token = await signToken({ id: acc._id });
-            let refreshToken = await signRfToken({ id: acc._id });
+            let token = await signToken({ id: acc._id,type:"employees" });
+            let refreshToken = await signRfToken({ id: acc._id,type:"employees" });
             await client.set("token", token);
             await client.set("refreshToken", refreshToken);
             return res.send({

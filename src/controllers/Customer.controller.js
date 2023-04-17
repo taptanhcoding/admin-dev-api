@@ -8,6 +8,7 @@ const {
 const sanitize = require("mongo-sanitize");
 const { randomBytes } = require("node:crypto");
 const bcrypt = require("bcrypt");
+const { signTokenCustomer, signRfTokenCustomer, verifyToken, verifyRfToken } = require("../helpers/token.helpers");
 
 class CustomersController {
   //-xử lý phía người dùng
@@ -32,6 +33,57 @@ class CustomersController {
       });
   }
 
+  //[GET ]/customer/auth
+  async AuthCustomer(req, res, next) {
+    const token = req.token
+    let data = null
+    try {
+      if (!token) return res.send({ status: true, data: null })
+      data = await verifyToken(token)
+      if (!data) return res.status(401).send({ status: false, message: 'Token lỗi' })
+      const user = await Customer.findOne({ $and: [{ _id: data.id }, { active: true }] }, { password: 0 }).exec()
+      return res.send({
+        status: true,
+        data: user
+      })
+    } catch (error) {
+      console.log('Looix auth ', error);
+      return res.status(500).send({
+        status: false,
+        message: "Lỗi"
+      })
+    }
+  }
+
+  // [POST] /customer/refresh-token
+  async RefreshCustomer(req, res, next) {
+    try {
+      const { refreshToken } = req.body;
+      const data = await verifyRfToken(refreshToken)
+      const customer = await Customer.findOne({
+        $and: [{ _id: sanitize(data.id) }, { active: true }],
+      });
+      if (customer) {
+        const token = await signTokenCustomer({ id: customer._id, type: 'customers' })
+        const refreshToken = await signRfTokenCustomer({ id: customer._id, type: 'customers' })
+
+        return res.send({
+          status: true,
+          message: "Đăng nhập thành công ",
+          token,
+          refreshToken
+        });
+      } else {
+        return res.status(404).send({
+          status: false,
+          message: "Email không tồn tại hoặc bị khóa",
+        });
+      }
+    } catch (error) {
+      console.log("Lỗi đăng nhập");
+    }
+  }
+
   // [POST] /customer/login
   async loginCustomer(req, res, next) {
     try {
@@ -41,9 +93,14 @@ class CustomersController {
       });
       if (customer) {
         if (await bcrypt.compare(password, customer.password)) {
+
+          const token = await signTokenCustomer({ id: customer._id, type: 'customers' })
+          const refreshToken = await signRfTokenCustomer({ id: customer._id, type: 'customers' })
           return res.send({
             status: true,
             message: "Đăng nhập thành công ",
+            token,
+            refreshToken
           });
         } else {
           return res.status(404).send({
@@ -68,16 +125,16 @@ class CustomersController {
       const { email } = req.params;
       const customers = await Customer.find({ email: sanitize(email) });
       if (customers.length > 0) {
-        const newPass = `N${randomBytes(8).toString("hex")}`;
+        const new_password = `N${randomBytes(8).toString("hex")}`;
         const salt = await bcrypt.genSalt(10);
-        const newPasswordBcr = await bcrypt.hash(newPass, salt);
+        const new_passwordwordBcr = await bcrypt.hash(new_password, salt);
         await Customer.updateOne(
           { email: sanitize(email) },
-          { $set: { password: newPasswordBcr } }
+          { $set: { password: new_passwordwordBcr } }
         );
         await mailForgotCustomer({
           email: sanitize(email),
-          password: newPass,
+          password: new_password,
         });
         return res.send({
           status: true,
@@ -98,23 +155,24 @@ class CustomersController {
   //[PATCH] /customer/update?changepass=true
   async updateCustomer(req, res, next) {
     try {
-      const { password, _id } = req.body;
+      const { id } = req.user;
+      let {password} = req.body
       const { changepass } = req.query;
       const newData = req.body;
-      const customer = await Customer.findOne({ _id: sanitize(_id) });
+      const customer = await Customer.findOne({ _id: sanitize(id) });
       if (!customer) {
         return res.status(500).send({
           status: false,
           message: "Không hợp lệ !!",
         });
       }
-      if (await bcrypt.compare(password, customer.password)) {
-        if (changepass) {
-          const { newPass, rpNewPass } = req.body;
-          if (newPass === rpNewPass) {
+      if (changepass) {
+        if (await bcrypt.compare(password, customer.password)) {
+          const { new_password, new_password_confirm } = req.body;
+          if (new_password === new_password_confirm) {
             const salt = await bcrypt.genSalt(10);
-            const newPasswordBcr = await bcrypt.hash(newPass, salt);
-            newData.password = newPasswordBcr;
+            const new_passwordwordBcr = await bcrypt.hash(new_password, salt);
+            newData.password = new_passwordwordBcr;
           } else {
             return res.status(400).send({
               status: false,
@@ -122,21 +180,24 @@ class CustomersController {
             });
           }
         }
-        await Customer.updateOne({ _id: sanitize(_id) }, { $set: newData });
+        else {
+          return res.send({
+            status: true,
+            message: "Sai mật khẩu !",
+          });
+        }
+
       }
-      else {
-        return res.send({
-          status: true,
-          message: "Sai mật khẩu !",
-        });
-      }
+      await Customer.updateOne({ _id: sanitize(id) }, { $set: newData });
+      const newDt = await Customer.findOne({ _id: sanitize(id) },{password:0})
 
       return res.send({
         status: true,
         message: "Cập nhật thành công",
+        data: newDt
       });
     } catch (error) {
-      console.log('lỗi update người dùng',error);
+      console.log('lỗi update người dùng', error);
       return res.status(400).send({
         status: true,
         message: "Cập nhật thất bại",
@@ -145,16 +206,16 @@ class CustomersController {
   }
 
   //[GET] /customer/active=:id
-  async activeCustomer(req,res,next) {
+  async activeCustomer(req, res, next) {
     try {
-      const {id}= req.params
-      await Customer.updateOne({id},{$set: {active: true}})
+      const { id } = req.params
+      await Customer.updateOne({ id }, { $set: { active: true } })
       return res.send({
         status: true,
         message: "Kích hoạt thành công, mời tiếp tục sử dụng!"
       })
     } catch (error) {
-      console.log('Lỗi kích hoạt',error);
+      console.log('Lỗi kích hoạt', error);
       return res.status(500).send({
         status: false,
         message: "Lỗi"
@@ -273,7 +334,7 @@ class CustomersController {
 
   // [DELETE] /Customer/destroy/
   async destroyCustomer(req, res, next) {
-    Customer.deletesMany({ _id: {$in :req.body.ids} })
+    Customer.deletesMany({ _id: { $in: req.body.ids } })
       .then(() =>
         res.send({
           status: true,

@@ -7,7 +7,7 @@ const jwtSettings = require('../configs/jwtSettings.configs')
 const signToken = async (data) => {
     try {
         let token = jwt.sign(data, SECRET, {
-            expiresIn: 24 * 60 * 60 * 365, //24 * 60 * 60, // expires in 24 hours (24 x 60 x 60)
+            expiresIn: 24 * 60 * 60, //24 * 60 * 60, // expires in 24 hours (24 x 60 x 60)
             audience: jwtSettings.AUDIENCE,
             issuer: jwtSettings.ISSUER,
             subject: data.id.toString(), // Thường dùng để kiểm tra JWT lần sau
@@ -57,9 +57,50 @@ const verifyRfToken = async (token) => {
     }
 }
 
+const verifyToken = async (token) => {
+    try {
+        let data = jwt.verify(token, SECRET)
+        return data
+    } catch (error) {
+        console.log(error);
+    }
+}
+
+const signTokenCustomer = async (data) => {
+    try {
+        let token = await jwt.sign(data, SECRET, {
+            expiresIn: 24 * 60 * 60, //24 * 60 * 60, // expires in 24 hours (24 x 60 x 60)
+            audience: jwtSettings.AUDIENCE,
+            issuer: jwtSettings.ISSUER,
+            subject: data.id.toString(), // Thường dùng để kiểm tra JWT lần sau
+            algorithm: 'HS512',
+        })
+        return token
+    } catch (error) {
+
+    }
+}
+
+const signRfTokenCustomer = async (data) => {
+    try {
+        let token = await jwt.sign(data, RF_CUSTOMER, {
+            expiresIn: 24 * 60 * 60, //24 * 60 * 60, // expires in 24 hours (24 x 60 x 60)
+            audience: jwtSettings.AUDIENCE,
+            issuer: jwtSettings.ISSUER,
+            subject: data.id.toString(), // Thường dùng để kiểm tra JWT lần sau
+            algorithm: 'HS512',
+        })
+        return token
+    } catch (error) {
+
+    }
+}
+
+
 module.exports = {
     signToken,
     signRfToken,
     verifyRfToken,
-    signTokenPss
+    verifyToken,
+    signTokenPss, signTokenCustomer, signRfTokenCustomer
 }

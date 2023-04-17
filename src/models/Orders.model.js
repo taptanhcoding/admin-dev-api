@@ -5,7 +5,8 @@ const Schema = mongoose.Schema
 
 const productOrder = new Schema({
     productCode: {type: String,require:true,ref:"product"},
-    quanity: {type: mongoose.Types.Decimal128},
+    quanity: {type: Number},
+    name: {type:String},
     price: {type: Number},
     discount: {type: Number},
     option: {type: Object}
@@ -50,9 +51,10 @@ order.pre('save',async function(next) {
     try {
         if(!this.code) {
             const now = new Date()
+            const time = now.getTime()
             const month = now.getMonth() + 1
             const year = now.getFullYear()
-            this.code = `DH${month}${year}`
+            this.code = `DH${time}${month}${year}`
         }
         if(this.status !== 'WAITING' && this.createDate == null || this.createDate == undefined) {
             this.createDate = new Date()

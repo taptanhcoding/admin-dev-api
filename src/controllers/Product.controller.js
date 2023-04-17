@@ -71,7 +71,8 @@ class ProductsController {
   //[GET] /products
   async getProductsByClient(req, res, next) {
     try {
-      const { page,number,sortBy } = req.params;
+      let quanity = 0
+      const { page,number,sortBy } = req.query;
        let p = page != undefined ? page : 1
       let n = number != undefined ? number*(p-1) : 0
       let sl = number != undefined ? number : 30
@@ -102,10 +103,13 @@ class ProductsController {
         options.description = 0 
         options.spec=0
         query["$and"].push({promotionPosition: req.query.position});
-      }
-      console.log('truy vấn: ',query);
-      let data = await Product.find(query,options)
 
+      }
+      if (req.query.q) {
+        query = { active: true, $text: { $search: req.query.q } }
+      }
+      let data = await Product.find(query,options).skip(n).limit(sl)
+      quanity = await Product.count(query)
       if (req.query.priceDiscount_less) {
         const s = { $subtract: [100, "$discount"] };
         const m = { $multiply: ["$price", s] };
@@ -113,6 +117,13 @@ class ProductsController {
         data = await Product.aggregate([
           { $match: { $expr: { $lte: [d, req.query.priceDiscountless] } } },
         ]).sort({[sB]: -1 }).skip(n).limit(sl);
+        let n= await Product.aggregate([
+          { $match: { $expr: { $lte: [d, req.query.priceDiscountless] } } },
+          {
+            $count: "number"
+          }
+        ])
+        quanity = n.number
       }
       if (req.query.priceDiscount_more) {
         const s = { $subtract: [100, "$discount"] };
@@ -121,20 +132,29 @@ class ProductsController {
         data = await Product.aggregate([
           { $match: { $expr: { $gte: [d, req.query.priceDiscountless] } } },
         ]).sort({[sB]: -1 }).skip(n).limit(sl);
+        let n= await Product.aggregate([
+          { $match: { $expr: { $gte: [d, req.query.priceDiscountless] } } },
+          {
+            $count: "number"
+          }
+        ])
+        quanity = n.number
+
       }
 
-      if (req.query.q) {
-        data = await Product.find({ active: true, $text: { $search: req.query.q } },options).sort({[sB]: -1 }).skip(n).limit(sl)
-      }
+     
       res.send({
         status: true,
         data,
+        quanity
       });
     } catch (err) {
       console.log(err);
       return res.send({
         status: false,
+        message: err,
         data: null,
+        quanity: 0
       });
     }
   }

@@ -6,6 +6,7 @@ const sanitize = require("mongo-sanitize");
 const { client } = require("../configs/redis.configs");
 const path = require("path");
 const rootPath = require("app-root-path").path;
+const bcrypt = require('bcrypt')
 const fs = require("fs");
 const {
   addDocumentsToRes
@@ -19,12 +20,15 @@ class SharesCtr {
   async getDocuments(req, res, next) {
     try {
       const { collection} = req.params;
-      const {id } = req.query;
+      const {id,slug } = req.query;
       let options = {}
       let data = []
       let query = {$and:[]}
       if(id) {
         query['$and'].push({_id:sanitize(id)})
+      }
+      if(slug) {
+        options.slug = 1
       }
       switch (collection) {
         case "categories":
@@ -115,11 +119,20 @@ class SharesCtr {
       updater: admin.fullname || admin.email,
       admin_id: admin._id,
     };
+    const {password} = req.body;
+    let newData = req.body
+    if(password !=='' && password) {
+      let salt = await bcrypt.genSalt(10)
+      newData.password = await bcrypt.hash(password,salt)
+    }
+    else {
+      delete newData.password
+    }
     const { collection, id } = req.params;
     try {
       await collections[collection].updateOne(
         { _id: sanitize(id) },
-        { $set: req.body }
+        { $set: newData }
       );
       const newDt = await collections[collection].find({ active: true });
       await addDocumentsToRes(collection, newDt)
@@ -325,6 +338,7 @@ class SharesCtr {
   async changeActiveDocuments(req, res, next) {
     const { collection } = req.params;
     const { status, ids } = req.body;
+    console.log('nhận vào: ',req.body);
     const admin = req.user;
     collections[collection]
       .updateMany(
@@ -342,14 +356,14 @@ class SharesCtr {
       .then(() =>
         res.send({
           status: true,
-          message: "Khóa nhiều thành công",
+          message: "Đổi trạng thái thành công",
         })
       )
       .catch((err) => {
         console.log(err);
         return res.send({
           status: false,
-          message: "Khóa nhiều thất bại",
+          message: "Đổi trạng thái thất bại",
         });
       });
   }
@@ -362,7 +376,6 @@ class SharesCtr {
       let filepath = path.join(rootPath, "src", "public", obj.coverImgUrl);
       fs.unlinkSync(filepath);
     }
-    console.log("Data id ", `uploads/${collection}/${id}/${req.file.filename}`);
     collections[collection]
       .updateOne(
         { _id: id },
@@ -454,6 +467,7 @@ class SharesCtr {
   async destroyDocuments(req, res, next) {
     const { collection } = req.params;
     let { ids } = req.body;
+    console.log(ids);
     collections[collection]
       .deleteMany({ _id: { $in: sanitize(ids) } })
       .then(async () => {
